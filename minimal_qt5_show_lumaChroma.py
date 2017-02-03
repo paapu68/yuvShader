@@ -293,7 +293,7 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         #glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Image.size[0], Image.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, ImageData)
 
-        (ix,iy,self.y,self.u,self.v)=self.get_image_yuv('1.yuv')
+        (ix,iy,self.y,self.u,self.v)=self.get_image_yuv('hello2.yuv')
         #print("finis")
         #print(self.y.shape)
         #sys.exit()
