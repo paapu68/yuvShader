@@ -176,15 +176,18 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
 
 
     def get_image_yuv(self, filename=None):
-        """ read image in luma chroma format """
+        """ read image in luma chroma format
+        identify hello2.tga     gives 400 x 300
+        convert  hello2.tga hello2.yuv
+        """
         f=open(filename,"b+r")
         st=f.read()
         f.close()
 
-        ix=1280
-        iy=720
+        ix=400
+        iy=300
 
-        n=720*1280 # assume 720p
+        n=ix*iy # assume 720p
         cn=0
 
         a=numpy.frombuffer(st,dtype=numpy.uint8)
@@ -194,10 +197,10 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         cn+=n
 
         # 4:2:2
-        u=a[cn:cn+n/4].reshape((720/2,1280/2))
+        u=a[cn:cn+n/4].reshape(n/4)
         cn+=n/4
 
-        v=a[cn:cn+n/4].reshape((720/2,1280/2))
+        v=a[cn:cn+n/4].reshape(n/4)
         return(ix, iy, y, u, v)
 
 
