@@ -1,5 +1,14 @@
 # PyQt5 imports
 
+"""
+from yuv file render to screen using opengl shader
+
+TO IMPROVE:
+For movies change GL_STATIC_DRAW to GL_STREAM_DRAW
+Shader is copied, could be improved
+mipmapping
+"""
+
 from PyQt5 import QtWidgets # Qt5
 from OpenGL.GL import *
 from OpenGL.GL.shaders import *
