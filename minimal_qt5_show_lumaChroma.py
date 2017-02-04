@@ -1,9 +1,8 @@
 # PyQt5 imports
 
-from PyQt5 import QtWidgets, QtCore, QtGui # Qt5
+from PyQt5 import QtWidgets # Qt5
 from OpenGL.GL import *
 from OpenGL.GL.shaders import *
-from OpenGL.GLU import *
 import numpy
 
 
@@ -12,15 +11,18 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
     width, height = 600, 600
 
     def __init__(self):
+        super(GLPlotWidget, self).__init__()
+
         self.program = None
         self.vertex = None
         self.fragment = None
         self.aVert = None
-        self.auV = None
+        self.aUV = None
         self.utexY = None
         self.utexU = None
         self.utexV = None
         self.vertexBuffer = None
+        self.uvBuffer = None
         self.uvShader = None
         self.y = None
         self.v = None
@@ -101,47 +103,43 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         }
     """
 
-
     def get_image(self, filename=None):
         """ make texture based on image """
         from PIL import Image
 
         img = Image.open(filename)  # .jpg, .bmp, etc. also work
         img_data = numpy.array(list(img.getdata()), numpy.uint8)
-
-        return (img, img_data)
-
+        return img, img_data
 
     def get_image_yuv(self, filename=None):
         """ read image in luma chroma format
         identify hello2.tga     gives 400 x 300
         convert  hello2.tga hello2.yuv
         """
-        f=open(filename,"b+r")
-        st=f.read()
+        f = open(filename, "b+r")
+        st = f.read()
         f.close()
 
-        ix=400
-        iy=300
+        ix = 400
+        iy = 300
 
-        n=ix*iy # assume 720p
-        cn=0
+        n = ix * iy  # assume 720p
+        cn = 0
 
-        a=numpy.frombuffer(st,dtype=numpy.uint8)
-        #y=a[cn:cn+n].reshape((720,1280))
-        y=numpy.zeros((n,1))
-        y[:,0]=a[cn:cn+n].reshape(n)
-        cn+=n
+        a = numpy.frombuffer(st, dtype=numpy.uint8)
+        # y=a[cn:cn+n].reshape((720,1280))
+        y = numpy.zeros((n, 1))
+        y[:, 0] = a[cn:cn + n].reshape(n)
+        cn += n
 
         # 4:2:2
-        u=numpy.zeros((n/4,1))
-        u[:,0]=a[cn:cn+n/4].reshape(n/4)
-        cn+=n/4
+        u = numpy.zeros((n / 4, 1))
+        u[:, 0] = a[cn:cn + n / 4].reshape(n / 4)
+        cn += n / 4
 
-        v=numpy.zeros((n/4,1))
-        v[:,0]=a[cn:cn+n/4].reshape(n/4)
-        return(ix, iy, y, u, v)
-
+        v = numpy.zeros((n / 4, 1))
+        v[:, 0] = a[cn:cn + n / 4].reshape(n / 4)
+        return ix, iy, y, u, v
 
     def initializeGL(self):
         # create shader program
@@ -177,17 +175,17 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         self.utexV = glGetUniformLocation(self.program, "texV")
 
         # set  vertices
-        Vertices = [
-            -1.0,  1.0, 0.0,
+        vertices = [
+            -1.0, 1.0, 0.0,
             -1.0, -1.0, 0.0,
-             1.0,  1.0, 0.0,
-             1.0,  1.0, 0.0,
+            1.0, 1.0, 0.0,
+            1.0, 1.0, 0.0,
             -1.0, -1.0, 0.0,
-             1.0, -1.0, 0.0]
+            1.0, -1.0, 0.0]
 
         self.vertexBuffer = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuffer)
-        vertexData = numpy.array(Vertices, numpy.float32)
+        vertexData = numpy.array(vertices, numpy.float32)
         glBufferData(GL_ARRAY_BUFFER, 4 * len(vertexData), vertexData, GL_STATIC_DRAW)
 
         # set  UV
@@ -203,7 +201,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glBindBuffer(GL_ARRAY_BUFFER, self.uvBuffer)
         uvData = numpy.array(UV, numpy.float32)
         glBufferData(GL_ARRAY_BUFFER, 4 * len(uvData), uvData, GL_STATIC_DRAW)
-
 
     def paintGL(self):
         """Paint the scene.
@@ -227,7 +224,7 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glVertexAttribPointer(self.aUV, 2, GL_FLOAT, GL_FALSE, 0, None)
 
         # read in yov figure, u and v have lower resolution compared to y
-        (ix,iy,self.y,self.u,self.v)=self.get_image_yuv('hello2.yuv')
+        (ix, iy, self.y, self.u, self.v) = self.get_image_yuv('hello2.yuv')
 
         self.textures = glGenTextures(3)
         glBindTexture(GL_TEXTURE_2D, self.textures[0])
@@ -238,19 +235,19 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glBindTexture(GL_TEXTURE_2D, self.textures[1])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix/2, iy/2, 0, GL_RED, GL_UNSIGNED_BYTE, self.u)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix / 2, iy / 2, 0, GL_RED, GL_UNSIGNED_BYTE, self.u)
 
         glBindTexture(GL_TEXTURE_2D, self.textures[2])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix/2, iy/2, 0, GL_RED, GL_UNSIGNED_BYTE, self.v)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix / 2, iy / 2, 0, GL_RED, GL_UNSIGNED_BYTE, self.v)
 
         # bind  textures
-        glActiveTexture(GL_TEXTURE0);
+        glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, self.textures[0])
-        glActiveTexture(GL_TEXTURE1);
+        glActiveTexture(GL_TEXTURE1)
         glBindTexture(GL_TEXTURE_2D, self.textures[1])
-        glActiveTexture(GL_TEXTURE2);
+        glActiveTexture(GL_TEXTURE2)
         glBindTexture(GL_TEXTURE_2D, self.textures[2])
 
         # draw
@@ -259,7 +256,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         # disable attribute arrays
         glDisableVertexAttribArray(self.aVert)
         glDisableVertexAttribArray(self.aUV)
-
 
     def resizeGL(self, width, height):
         """Called upon window resizing: reinitialize the viewport.
@@ -279,7 +275,6 @@ if __name__ == '__main__':
     # import numpy for generating random data points
     import sys
     import numpy as np
-    import numpy.random as rdn
 
     # define a Qt window with an OpenGL widget inside it
     class TestWindow(QtWidgets.QMainWindow):
@@ -296,4 +291,3 @@ if __name__ == '__main__':
     window = TestWindow()
     window.show()
     app.exec_()
-
