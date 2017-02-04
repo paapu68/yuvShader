@@ -29,69 +29,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
 
     # fragment shader program
     # from https://gist.github.com/varphone/e21618adcdb687ce5c6cf54021593949
-    fragmentShaderNew = """
-        #version 300 es
-        precision mediump float;
-        uniform sampler2D texY; // Y
-        //mok uniform sampler2D texU; // U
-        //mok uniform sampler2D texV; // V
-
-        in vec2 UV;
-
-        vec3 yuv2rgb(in vec3 yuv)
-        {
-            // YUV offset
-            // const vec3 offset = vec3(-0.0625, -0.5, -0.5);
-            const vec3 offset = vec3(-0.0625, -0.5, -0.5);
-            // RGB coefficients
-            const vec3 Rcoeff = vec3( 1.164, 0.000,  1.596);
-            const vec3 Gcoeff = vec3( 1.164, -0.391, -0.813);
-            const vec3 Bcoeff = vec3( 1.164, 2.018,  0.000);
-
-            vec3 rgb;
-
-            yuv = clamp(yuv, 0.0, 1.0);
-
-            yuv += offset;
-
-            rgb.r = dot(yuv, Rcoeff);
-            rgb.g = dot(yuv, Gcoeff);
-            rgb.b = dot(yuv, Bcoeff);
-            return rgb;
-        }
-
-
-        vec3 get_yuv_from_texture(in vec2 tcoord)
-        {
-            vec3 yuv;
-            yuv.x = texture(texY, tcoord).r;
-            // Get the U and V values
-            //mok yuv.y = texture(texU, tcoord).r;
-            //mok yuv.z = texture(texV, tcoord).r;
-            yuv.y = 0.0
-            yuv.z = 0.0
-            return yuv;
-        }
-
-        vec4 mytexture2D(in vec2 tcoord)
-        {
-            vec3 rgb, yuv;
-            yuv = get_yuv_from_texture(tcoord);
-            // Do the color transform
-            rgb = yuv2rgb(yuv);
-            return vec4(rgb, 1.0);
-        }
-
-        out vec4 out_color;
-
-        void main()
-        {
-            // That was easy. :)
-            out_color = mytexture2D(UV);
-        }
-    """
-
-    # fragment shader program
     fragmentShader = """
         #version 300 es
         precision mediump float;
@@ -129,10 +66,8 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
             vec3 yuv;
             yuv.x = texture(texY, tcoord).r;
             // Get the U and V values
-            //mok yuv.y = texture(texU, tcoord).r;
-            //mok yuv.z = texture(texV, tcoord).r;
-            yuv.y = 0.0;
-            yuv.z = 0.0;
+            yuv.y = texture(texU, tcoord).r;
+            yuv.z = texture(texV, tcoord).r;
             return yuv;
 
         }
@@ -152,18 +87,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         }
     """
 
-    # fragment shader program
-    fragmentShaderOld = """
-        #version 300 es
-        precision mediump float;
-        in vec2 UV;
-        uniform sampler2D texY; // Y
-        out vec3 colour;
-
-        void main() {
-          colour = texture(texY, UV).rgb;
-        }
-    """
 
     def get_image(self, filename=None):
         """ make texture based on image """
@@ -197,10 +120,12 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         cn+=n
 
         # 4:2:2
-        u=a[cn:cn+n/4].reshape(n/4)
+        u=numpy.zeros((n/4,1))
+        u[:,0]=a[cn:cn+n/4].reshape(n/4)
         cn+=n/4
 
-        v=a[cn:cn+n/4].reshape(n/4)
+        v=numpy.zeros((n/4,1))
+        v[:,0]=a[cn:cn+n/4].reshape(n/4)
         return(ix, iy, y, u, v)
 
 
@@ -266,9 +191,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glBufferData(GL_ARRAY_BUFFER, 4 * len(uvData), uvData, GL_STATIC_DRAW)
 
 
-
-
-
     def paintGL(self):
         """Paint the scene.
         """
@@ -280,7 +202,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glUniform1i(self.utexU, 1)
         glUniform1i(self.utexV, 2)
 
-
         # enable attribute arrays
         glEnableVertexAttribArray(self.aVert)
         glEnableVertexAttribArray(self.aUV)
@@ -291,18 +212,9 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glBindBuffer(GL_ARRAY_BUFFER, self.uvBuffer)
         glVertexAttribPointer(self.aUV, 2, GL_FLOAT, GL_FALSE, 0, None)
 
-        # set texture
-        #(Image, ImageData) = self.get_image('image_left.png')
-        #self.textures = glGenTextures(3)
-        #glBindTexture(GL_TEXTURE_2D, self.textures[0])
-        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        #glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Image.size[0], Image.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, ImageData)
-
+        # read in yov figure, u and v have lower resolution compared to y
         (ix,iy,self.y,self.u,self.v)=self.get_image_yuv('hello2.yuv')
-        #print("finis")
-        #print(self.y.shape)
-        #sys.exit()
+
         self.textures = glGenTextures(3)
         glBindTexture(GL_TEXTURE_2D, self.textures[0])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
@@ -314,10 +226,18 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix/2, iy/2, 0, GL_RED, GL_UNSIGNED_BYTE, self.u)
 
+        glBindTexture(GL_TEXTURE_2D, self.textures[2])
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix/2, iy/2, 0, GL_RED, GL_UNSIGNED_BYTE, self.v)
 
         # bind  textures
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, self.textures[0])
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, self.textures[1])
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, self.textures[2])
 
         # draw
         glDrawArrays(GL_TRIANGLES, 0, 6)
@@ -325,10 +245,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         # disable attribute arrays
         glDisableVertexAttribArray(self.aVert)
         glDisableVertexAttribArray(self.aUV)
-
-        # swap buffers
-        #glutSwapBuffers()
-
 
 
     def resizeGL(self, width, height):
@@ -343,8 +259,6 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glLoadIdentity()
         # the window corner OpenGL coordinates are (-+1, -+1)
         glOrtho(-1, 1, 1, -1, -1, 1)
-
-
 
 
 if __name__ == '__main__':
