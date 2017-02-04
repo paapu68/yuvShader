@@ -11,7 +11,21 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
     # default window size
     width, height = 600, 600
 
-    # constants
+    def __init__(self):
+        self.program = None
+        self.vertex = None
+        self.fragment = None
+        self.aVert = None
+        self.auV = None
+        self.utexY = None
+        self.utexU = None
+        self.utexV = None
+        self.vertexBuffer = None
+        self.uvShader = None
+        self.y = None
+        self.v = None
+        self.u = None
+        self.textures = None
 
     # vertex shader program
     vertexShader = """
