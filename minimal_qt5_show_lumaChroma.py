@@ -192,7 +192,7 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
 
         a=numpy.frombuffer(st,dtype=numpy.uint8)
         #y=a[cn:cn+n].reshape((720,1280))
-        y=numpy.zeros((n,3))
+        y=numpy.zeros((n,1))
         y[:,0]=a[cn:cn+n].reshape(n)
         cn+=n
 
@@ -277,6 +277,9 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
 
         # set uniforms
         glUniform1i(self.utexY, 0)
+        glUniform1i(self.utexU, 1)
+        glUniform1i(self.utexV, 2)
+
 
         # enable attribute arrays
         glEnableVertexAttribArray(self.aVert)
@@ -304,12 +307,12 @@ class GLPlotWidget(QtWidgets.QOpenGLWidget):
         glBindTexture(GL_TEXTURE_2D, self.textures[0])
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ix, iy, 0, GL_RGB, GL_UNSIGNED_BYTE, self.y)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix, iy, 0, GL_RED, GL_UNSIGNED_BYTE, self.y)
 
-        #glBindTexture(GL_TEXTURE_2D, self.textures[1])
-        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        #glTexImage2D(GL_TEXTURE_2D, 1, GL_RGB, Image.size[0], Image.size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, ImageData)
+        glBindTexture(GL_TEXTURE_2D, self.textures[1])
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ix/2, iy/2, 0, GL_RED, GL_UNSIGNED_BYTE, self.u)
 
 
         # bind  textures
